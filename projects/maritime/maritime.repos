@@ -1,0 +1,47 @@
+# Source repositories for the maritime workspace.
+#
+#   drydock ws sync     import (safe to re-run; never clobbers a PR checkout)
+#   drydock ws pull     fast-forward every repository
+#
+# Pinned to BRANCHES, not SHAs, on purpose: the image is the pinned artifact
+# (DRYDOCK_TAG in .env), while the source is meant to move. Reviewing a
+# colleague's work is `gh pr checkout <N>` in one of these, then rebuild.
+#
+# https rather than ssh so a fresh machine needs no key setup; these are all
+# public repositories, and pushes work through the gh credential helper in your
+# mounted home. If you already have ssh checkouts, `ws sync` reports "Skipped
+# existing repository with different URL" — that is informational, not an error.
+repositories:
+  gz-maritime:
+    type: git
+    url: https://github.com/HonuRobotics/gz-maritime.git
+    version: lyrical
+
+  bluerobotics_models:
+    type: git
+    url: https://github.com/HonuRobotics/bluerobotics_models.git
+    version: lyrical
+
+  holybro_models:
+    type: git
+    url: https://github.com/HonuRobotics/holybro_models.git
+    version: lyrical
+
+  # NOTE: encinowaves currently has no package.xml, so colcon SKIPS it — a
+  # checkout in src/ silently does nothing and gz_waves_provider_fft's
+  # find_package(EncinoWaves REQUIRED) resolves against whatever was last
+  # manually `cmake --install`ed. Until HonuRobotics/encinowaves#<pr> adds a
+  # plain-CMake package.xml, build and install it by hand:
+  #
+  #   drydock run bash -lc 'cd $DRYDOCK_WS/src/encinowaves && \
+  #     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  #           -DCMAKE_INSTALL_PREFIX=$DRYDOCK_WS/encinowaves_install && \
+  #     cmake --build build -j"$(nproc)" && cmake --install build'
+  #
+  # then export CMAKE_PREFIX_PATH=$DRYDOCK_WS/encinowaves_install:$CMAKE_PREFIX_PATH
+  # before colcon build. Once the package.xml lands, colcon builds it in
+  # topological order and none of that is needed.
+  encinowaves:
+    type: git
+    url: https://github.com/HonuRobotics/encinowaves.git
+    version: master

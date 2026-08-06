@@ -1,0 +1,49 @@
+# apt packages for the maritime project (gz-maritime, encinowaves, and the
+# vehicle model repositories).
+#
+# Hand-maintained on purpose. The source tree is not in the image, so
+#
+#     drydock run rosdep install --from-paths src --ignore-src -y
+#
+# against the mounted workspace is what AUTHORITATIVELY resolves dependencies.
+# This list just means you rarely have to wait for it. When rosdep installs
+# something here, add it to this file so the next image build has it.
+#
+# Syntax: one package per line, # comments, ${ROS_DISTRO} is substituted.
+
+# ---- ROS packages ---------------------------------------------------------
+ros-${ROS_DISTRO}-ackermann-msgs
+ros-${ROS_DISTRO}-actuator-msgs
+ros-${ROS_DISTRO}-ament-cmake-pycodestyle
+ros-${ROS_DISTRO}-image-transport
+ros-${ROS_DISTRO}-image-transport-plugins
+ros-${ROS_DISTRO}-joy-teleop
+ros-${ROS_DISTRO}-joy-linux
+ros-${ROS_DISTRO}-mavros-msgs
+ros-${ROS_DISTRO}-radar-msgs
+ros-${ROS_DISTRO}-robot-state-publisher
+ros-${ROS_DISTRO}-rviz2
+ros-${ROS_DISTRO}-vision-msgs
+ros-${ROS_DISTRO}-xacro
+
+# nav2 (navigation2, nav2-bringup, nav2-minimal-*) is intentionally omitted:
+# it is often not yet released early in a new distro's life. Add
+# ros-${ROS_DISTRO}-navigation2 once it is available on Lyrical.
+
+# ---- EncinoWaves build dependencies ---------------------------------------
+# EncinoWaves is built FROM SOURCE in the workspace, as a colcon package
+# alongside everything else — it is a library this team actively develops, so
+# baking a fixed copy into the image would be exactly wrong. These are the
+# dependencies its CMakeLists needs; the library itself is not installed here.
+#
+# (A prebuilt libencinowaves-dev is published at packages.honurobotics.com for
+# anyone who never touches the library — see the README.)
+cmake
+build-essential
+libeigen3-dev
+libtbb-dev
+libimath-dev
+
+# ---- misc -----------------------------------------------------------------
+libbluetooth-dev
+libcwiid-dev

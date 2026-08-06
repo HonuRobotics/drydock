@@ -1,0 +1,18 @@
+# The build context is this repository. The image needs only
+# docker/entrypoint.sh and projects/<PROJECT>/apt-packages.txt, so keep the
+# rest out — editing the README or the drydock script should not invalidate a
+# single layer.
+.git
+.github
+.env
+.env.example
+README.md
+CHANGELOG.md
+LICENSE
+drydock
+scripts
+docker/compose.yaml
+docker/compose.nvidia.yaml
+projects/*/README.md
+projects/*/commands.sh
+projects/*/*.repos

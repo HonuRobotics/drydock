@@ -1,0 +1,99 @@
+# drydock development container.
+#
+# Plain Docker Compose so it does not depend on rocker knowing the current
+# Ubuntu release. Mirrors what we used to get from:
+#
+#   rocker --home --user --x11 --nvidia --devices /dev/dri ... bash
+#
+# One service. Named shortcuts (`drydock sim`, ...) are commands passed to this
+# same service, not extra services — see projects/<name>/commands.sh.
+#
+# Easiest:  ./drydock shell
+#
+# Manually:
+#   touch /tmp/.docker.xauth        # or Docker creates a DIRECTORY there and X breaks
+#   set -a; . ./.env; set +a
+#   USER_UID=$(id -u) USER_GID=$(id -g) \
+#     docker compose -f docker/compose.yaml run --rm --remove-orphans dev
+#
+# `run --rm` gives a fresh interactive shell and removes the container on exit,
+# which is the rocker-like behaviour. Use `up -d` + `exec dev bash` if you
+# prefer a long-lived container.
+
+name: drydock
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        ROS_DISTRO: ${ROS_DISTRO:-lyrical}
+        PROJECT: ${DRYDOCK_PROJECT:-maritime}
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+
+    # `build:` and `image:` together mean `docker compose build` tags the image
+    # with exactly the name the run path expects, and `docker compose pull`
+    # would work unchanged if we ever publish to a registry.
+    image: ${DRYDOCK_IMAGE:-drydock}:${DRYDOCK_TAG:-lyrical-maritime}
+
+    # --- interactive shell (rocker's default) ---
+    stdin_open: true                  # docker -i
+    tty: true                         # docker -t
+
+    # --- host networking: ROS 2 DDS discovery + the simplest X11 path
+    #     (DISPLAY reaches the host X server directly) ---
+    network_mode: host
+    ipc: host
+
+    # Workspace root. The drydock script exports DRYDOCK_WS; the fallback covers
+    # a bare `docker compose` invocation, dropping you in wherever you stand.
+    working_dir: ${DRYDOCK_WS:-${PWD}}
+
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      XAUTHORITY: /tmp/.docker.xauth
+      QT_X11_NO_MITSHM: 1
+
+      # The container user is `honu` with image home /home/honu, but HOME points
+      # at your host home, which is the one bind-mounted below. Nothing is
+      # shadowed — the two paths differ — and getpwuid() still resolves a real
+      # named user, which some Qt and Gazebo code paths require.
+      HOME: ${HOME}
+      DRYDOCK_WS: ${DRYDOCK_WS:-${PWD}}
+
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+      # Host networking otherwise puts your sim on the office LAN for every
+      # other ROS 2 node to discover. LOCALHOST still allows host<->container
+      # discovery, since they share loopback. Set SUBNET only for deliberate
+      # multi-machine work, and take a distinct ROS_DOMAIN_ID if you do.
+      ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}
+
+      # gz-transport partitions by <hostname>:<username>, and the container user
+      # is `honu`, not your host user. Pinning it means host-side inspection is
+      # just `GZ_PARTITION=drydock gz topic -l` with nothing to look up.
+      GZ_PARTITION: ${GZ_PARTITION:-drydock}
+
+      # The one real hazard of a whole-$HOME mount: your host
+      # ~/.local/lib/python3*/site-packages would otherwise land on the
+      # container's PYTHONPATH and silently shadow container packages.
+      PYTHONNOUSERSITE: ${PYTHONNOUSERSITE:-1}
+
+      # This base renders on the Intel/AMD iGPU via the /dev/dri passthrough
+      # below. NVIDIA access and PRIME render offload live in
+      # compose.nvidia.yaml, which the drydock script layers in automatically
+      # when a usable NVIDIA GPU is detected.
+
+    volumes:
+      - ${HOME}:${HOME}                                  # rocker --home
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw                 # X11 socket
+      # An X cookie the container user can actually use, rewritten to
+      # FamilyWild by the drydock script. Deliberately at /tmp rather than
+      # bind-mounted onto ~/.Xauthority: GDM's $XAUTHORITY lives under
+      # /run/user/<uid>/gdm/ and collides with the home mount.
+      - ${XAUTH_FILE:-/tmp/.docker.xauth}:/tmp/.docker.xauth:rw
+
+    devices:
+      - /dev/dri:/dev/dri                                # direct rendering (Intel/AMD/GL)
+      # - /dev/input/js0:/dev/input/js0                  # joystick, if you have one

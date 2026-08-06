@@ -13,17 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Sources the ROS underlay and this repository's overlay, then execs the
-# command. The overlay is sourced only if it exists: with the source tree
-# bind-mounted (compose `dev` profile) the workspace may not be built yet.
+# Sources the ROS underlay and, if it exists, the mounted workspace's overlay,
+# then execs the command. The overlay is sourced only if present: the workspace
+# is bind-mounted from the host and may not be built yet, and the container
+# must still start so you can build it.
 set -e
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
 
 # Both colcon install layouts are supported: the default isolated layout and
-# --merge-install both produce ${WORKSPACE}/install/setup.bash.
-if [ -f "${WORKSPACE:-/ws}/install/setup.bash" ]; then
-  source "${WORKSPACE:-/ws}/install/setup.bash"
+# --merge-install both produce ${DRYDOCK_WS}/install/setup.bash.
+if [ -n "${DRYDOCK_WS:-}" ] && [ -f "${DRYDOCK_WS}/install/setup.bash" ]; then
+  source "${DRYDOCK_WS}/install/setup.bash"
 fi
 
 exec "$@"
