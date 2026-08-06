@@ -196,6 +196,13 @@ Everything lives in `.env` (copied from `.env.example`).
 
 **Rendering works but is very slow** — check `glxinfo -B` as above. On a hybrid laptop you may have landed on the integrated GPU; see the trap above. Rendering on one GPU while the display is driven by the other adds a per-frame cross-GPU copy on top of the slower rendering.
 
+**`Another world of the same name is running`** — a previous container is still up. Ctrl-C cleans up after itself, but a session killed some other way (a `timeout`, a closed terminal, SIGTERM from a script) leaves the container running despite `--rm`, and the second sim then collides with the first. Check and clear:
+
+```bash
+docker ps --filter name=drydock
+docker rm -f $(docker ps -aq --filter name=drydock)
+```
+
 **`Cannot locate rosdep definition`** — stale rosdep cache. `drydock run rosdep update` first, or rebuild with `drydock build --no-cache`.
 
 **A package will not configure and the dependency is not in `apt-packages.txt`** — that is expected drift. Run `drydock run rosdep install --from-paths src --ignore-src -y`, then add what it installed to `projects/<name>/apt-packages.txt` and open a PR so the next build has it.
