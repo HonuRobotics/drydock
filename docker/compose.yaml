@@ -23,6 +23,7 @@ services:
       context: ..
       dockerfile: ${DRYDOCK_DOCKERFILE:-docker/Dockerfile}
       args:
+        BASE_IMAGE: ${BASE_IMAGE:-ros:lyrical-ros-base}
         ROS_DISTRO: ${ROS_DISTRO:-lyrical}
         PROJECT: ${DRYDOCK_PROJECT:-maritime}
         USER_UID: ${USER_UID:-1000}

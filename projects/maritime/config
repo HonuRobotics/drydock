@@ -1,0 +1,12 @@
+# Build configuration for the maritime project. Sourced by the drydock script,
+# so it is version-controlled alongside the package list rather than being
+# something each developer has to remember to type.
+#
+# ROS_DISTRO   the distro to build against. Also substituted into
+#              apt-packages.txt, and picks the default BASE_IMAGE below.
+# BASE_IMAGE   what the shared docker/Dockerfile starts FROM. Change this to
+#              move a project onto a different base without giving it a whole
+#              Dockerfile of its own.
+
+ROS_DISTRO=lyrical
+BASE_IMAGE=ros:${ROS_DISTRO}-ros-base

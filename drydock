@@ -15,11 +15,16 @@
 #
 # Build an image, run it as a container, join that container.
 #
-#   drydock build  <project> [--distro D] [--tag T] [docker build args...]
-#   drydock run    <project> [--tag T]           start it and open a shell
-#   drydock join   <project> [--tag T] [cmd...]  another shell in the same container
-#   drydock stop   <project>                     remove the container
-#   drydock doctor [project]                     host-side checks
+#   drydock build  <project> [docker build args...]
+#   drydock run    <project>           start it and open a shell
+#   drydock join   <project> [cmd...]  another shell, same container
+#   drydock stop   <project>           remove the container
+#   drydock doctor [project]           host-side checks
+#
+# A project is a directory under projects/ holding a `config` (ROS_DISTRO,
+# BASE_IMAGE) and an `apt-packages.txt`. Everything a build needs comes from
+# there, so there is nothing to remember to type — to build against a different
+# distro, copy the project directory and edit its config.
 #
 # What it adds over plain `docker compose`: an X cookie the container user can
 # actually use, your UID/GID, GPU selection, and `sudo docker` when you are not
@@ -32,13 +37,11 @@ set -euo pipefail
 
 readonly HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-usage() { sed -n '16,30p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; }
+usage() { sed -n '16,35p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; }
 
 # ---- argument parsing -----------------------------------------------------
 
 PROJECT=""
-DISTRO="lyrical"
-TAG=""
 NAME=""
 EXTRA=()
 
@@ -60,10 +63,10 @@ fi
 
 while [ $# -gt 0 ]; do
   case "${1}" in
-    --distro) DISTRO="${2:?--distro needs a value}"; shift 2 ;;
-    --tag)    TAG="${2:?--tag needs a value}";       shift 2 ;;
-    --name)   NAME="${2:?--name needs a value}";     shift 2 ;;
+    --name) NAME="${2:?--name needs a value}"; shift 2 ;;
     --)       shift; EXTRA+=("$@"); break ;;
+    # Anything else goes to `docker compose build`, so --no-cache, --pull and
+    # --progress=plain work without drydock knowing about them.
     *)        EXTRA+=("${1}"); shift ;;
   esac
 done
@@ -85,20 +88,35 @@ if [ -n "${PROJECT}" ] && [ ! -d "${HERE}/projects/${PROJECT}" ]; then
   exit 2
 fi
 
-TAG="${TAG:-${PROJECT}}"
-NAME="${NAME:-drydock-${PROJECT}}"
+# ---- project configuration ------------------------------------------------
+
+# Defaults, for a project whose config omits them.
+ROS_DISTRO="lyrical"
+BASE_IMAGE=""
+
+if [ -n "${PROJECT}" ] && [ -f "${HERE}/projects/${PROJECT}/config" ]; then
+  # shellcheck disable=SC1091
+  . "${HERE}/projects/${PROJECT}/config"
+fi
+
+# One image per project, named after it. Building against a different distro
+# means a different project directory, not a flag — so the two builds differ by
+# a reviewable file rather than by what someone typed.
+TAG="${PROJECT}"
+NAME="${NAME:-drydock-${TAG}}"
 
 export DRYDOCK_IMAGE="drydock"
 export DRYDOCK_TAG="${TAG}"
-export ROS_DISTRO="${DISTRO}"
+export ROS_DISTRO
+export BASE_IMAGE="${BASE_IMAGE:-ros:${ROS_DISTRO}-ros-base}"
 export DRYDOCK_PROJECT="${PROJECT}"
 export USER_UID="${USER_UID:-$(id -u)}"
 export USER_GID="${USER_GID:-$(id -g)}"
 export XAUTH_FILE="${XAUTH_FILE:-/tmp/.docker.xauth}"
 
-# A project may override the shared recipe with its own Dockerfile — for a
-# different base image, say. Prefer it when present. This is the escape hatch;
-# apt-packages.txt is the normal way for projects to differ.
+# A project can set BASE_IMAGE in its config to move onto a different base, so
+# it should rarely need a Dockerfile of its own. When it does have one, prefer
+# it — that is the escape hatch for a genuinely different recipe.
 if [ -n "${PROJECT}" ] && [ -f "${HERE}/projects/${PROJECT}/Dockerfile" ]; then
   export DRYDOCK_DOCKERFILE="projects/${PROJECT}/Dockerfile"
 else
@@ -274,8 +292,8 @@ doctor() {
 
 case "${cmd}" in
   build)
+    echo "==> ${DRYDOCK_IMAGE}:${TAG} from ${DRYDOCK_DOCKERFILE}, FROM ${BASE_IMAGE}" >&2
     compose build "${EXTRA[@]}" dev
-    echo "==> built ${DRYDOCK_IMAGE}:${TAG} from ${DRYDOCK_DOCKERFILE}" >&2
     ;;
 
   run)

@@ -10,3 +10,4 @@ drydock
 docker/compose.yaml
 docker/compose.nvidia.yaml
 projects/*/README.md
+projects/*/config

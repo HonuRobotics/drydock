@@ -20,7 +20,7 @@ Three things: build an image, run it as a container, join that container from as
 
 Linux only. Host networking, `/dev/dri`, `/tmp/.X11-unix` and the NVIDIA runtime have no equivalent on Docker Desktop for macOS.
 
-The GPU is optional — without one you get Mesa's llvmpipe: everything works - likely slow.
+The GPU is optional — without one you get Mesa's llvmpipe: everything works, just slowly.
 
 ## Quick start
 
@@ -31,7 +31,7 @@ git clone https://github.com/HonuRobotics/drydock.git && cd drydock
 ./drydock run maritime        # starts the container, opens a shell
 ```
 
-You are now in a shell with ROS 2 and Gazebo, in the same directory you started from, with your home directory mounted. Everything from here is as if you started from a clean host:
+You are now in a shell with ROS 2 and Gazebo, in the same directory you started from, with your home directory mounted. Everything from here is as if you started from a clean host, e.g., 
 
 ```bash
 mkdir -p ~/ws/src && cd ~/ws/src
@@ -54,18 +54,22 @@ Closing a shell leaves the container running. `./drydock stop maritime` removes 
 ## Commands
 
 ```
-drydock build  <project> [--distro D] [--tag T] [docker build args...] % CLAUDE: Add a no cache option to force rebuild
-drydock run    <project> [--tag T]           start it and open a shell
-drydock join   <project> [--tag T] [cmd...]  another shell in the same container
-drydock stop   <project>                     remove the container
-drydock doctor [project]                     host-side checks
+drydock build  <project> [docker build args...]
+drydock run    <project>           start it and open a shell
+drydock join   <project> [cmd...]  another shell, same container
+drydock stop   <project>           remove the container
+drydock doctor [project]           host-side checks
 ```
 
-| Flag | Default | |
-|---|---|---|
-| `--distro` | `lyrical` | ROS distro; picks the `ros:<distro>-ros-base` base image | % CLAUDE: I want the distro information to b a part of the configuration  in the project directory.   Present me with another option.
-| `--tag` | the project name | Image is `drydock:<tag>` | % CLAUDE: Why would i use a tag?
-| `--name` | `drydock-<project>` | Compose project name, so two projects can run at once | % CLAUDE: Explain to me in a sidebar - curious how this works.
+Everything a build needs comes from the project directory, so there are no flags to learn — the project name is the whole interface. The one exception is `--name N`, which overrides the Compose project name (see the sidebar below) if you want a second, independent container from the same image. You will rarely want it.
+
+Anything else is handed straight to `docker compose build`, so the flags pass through:
+
+```bash
+drydock build maritime --no-cache       # force a full rebuild
+drydock build maritime --pull           # refresh the base image first
+drydock build maritime --progress=plain # full log instead of the collapsing view
+```
 
 `join` takes a command instead of opening a shell: `drydock join maritime colcon test`.
 
@@ -73,31 +77,69 @@ drydock doctor [project]                     host-side checks
 
 Rebuilding is picked up automatically — `run` recreates the container when the image has changed.
 
+> **Sidebar: what the Compose project name does**
+>
+> `docker compose -p <name>` namespaces everything a compose file creates. Containers are named `<name>-<service>-<index>`, so drydock's single `dev` service becomes `drydock-maritime-dev-1`, and any networks or volumes get the same prefix.
+>
+> That namespace is how `join` and `stop` find the right container without you naming it: they run the same `-p drydock-maritime` and Compose resolves `dev` to the container already running under it. It is also what lets two projects run side by side — `drydock-maritime-dev-1` and `drydock-other-dev-1` are unrelated as far as Compose is concerned, even though both came from the same `docker/compose.yaml`.
+>
+> The name defaults to `drydock-<project>`, so you never have to think about it. `docker ps --filter name=drydock` shows everything drydock has running.
+
 ## How it fits together
 
-Your whole `$HOME` is bind-mounted % CLAUDE: What is the difference between bind-mounted and must mounted?
- at the same absolute path inside the container, and every session opens in the directory you invoked it from. 
+Your whole `$HOME` is bind-mounted into the container, and every session opens in the directory you invoked it from.
 
-Path identity is load-bearing. % CLAUDE: Explain this.
-This is important because `colcon` includes absolute paths into `install/setup.bash`, the `.dsv` environment hooks, CMake caches and RPATHs, so the host and the container have to agree on where the workspace is. It also means `build/` and `log/` stay visible on the host.
+
+It is mounted **at the same absolute path** inside as outside. That matters because `colcon` writes absolute paths into `install/setup.bash`, the `.dsv` environment hooks, CMake caches and binary RPATHs.  Keeping the path identical means artifacts built inside work outside, and vice versa. `build/` and `log/` stay visible on the host.
 
 `PYTHONNOUSERSITE=1` is set, so your host `~/.local/lib/python3*/site-packages` does not silently land on the container's `PYTHONPATH`.
 
 The container user is `honu` at UID 1000, renamed from the base image's existing UID-1000 user rather than added alongside it, so files you create keep your ownership and you get a real named user with passwordless `sudo`. `HOME` points at your host home, not `/home/honu`.
 
-Gazebo is never named in an apt line. It arrives transitively through `ros-${ROS_DISTRO}-ros-gz` and the `ros-${ROS_DISTRO}-gz-*-vendor` packages, deliberately: `gz_waves` does `find_package(gz_sim_vendor)`, so the real vendor packages with their CMake shims are required. % CLAUDE: Mentioning gz_waves here ties this to an external project.  Better to be more general.
+Where a project uses Gazebo, it is never named in an apt line. It arrives transitively through `ros-${ROS_DISTRO}-ros-gz` and the `ros-${ROS_DISTRO}-gz-*-vendor` packages. That is deliberate: ROS packages that build against Gazebo `find_package()` the vendor packages rather than Gazebo itself, and it is those packages that carry the CMake shims making that work. Installing Gazebo directly would satisfy the libraries but not the shims.
 
 ## Projects
 
-One directory per project under `projects/`. A project is a build-time argument, not stored state — nothing remembers which one you last used.
+One directory per project under `projects/`, holding everything that makes that project different. 
 
 ```
 projects/<name>/
+├── config             # required; ROS_DISTRO and BASE_IMAGE
 ├── apt-packages.txt   # required; one package per line, ${ROS_DISTRO} substituted
-└── Dockerfile         # optional
+└── Dockerfile         # optional; rarely needed
 ```
 
-Adding packages to `apt-packages.txt` is how projects should normally differ. The optional `Dockerfile` for one that genuinely needs a different recipe — a different base image, say — and the script prefers it over `docker/Dockerfile` when present. Use it sparingly: [dockwater](https://github.com/HonuRobotics/dockwater) ended up with seven near-identical Dockerfiles that drifted apart, which is the outcome to avoid. A project that only wants extra layers can start `FROM drydock:<other>`. % CLAUDE: We might need to discuss how to do this better - see earlier comment about about having distro in the version controlled projects space.
+`config` is short and is version-controlled, so distro and base image a project builds against is a property of the project.   For example:
+
+```bash
+# projects/maritime/config
+ROS_DISTRO=lyrical
+BASE_IMAGE=ros:${ROS_DISTRO}-ros-base
+```
+
+`apt-packages.txt` provides the package list integrated in the shared `docker/Dockerfile`
+
+The optional `Dockerfile` **replaces** the shared one — `docker/Dockerfile` is not read at all for that project. Use this option when a project needs different build *steps*, since different distro, base image and packages are already covered by the two files above.
+
+Replacing it means taking on the three things `run` and `join` rely on:
+
+- **A user at `USER_UID`:`USER_GID`, made the image's `USER`.** Compose does not set `user:`, so whatever the image ends on is who you are — leave it as root and everything you create in your home is root-owned.
+- **ROS on `PATH` for non-login shells** — `/etc/bash.bashrc` plus `ENV BASH_ENV`. `docker compose exec` does not run the entrypoint, so this, not `entrypoint.sh`, is what puts `ros2` in front of you.
+- **An entrypoint that `exec "$@"`, and `sleep` on `PATH`**, because the container is held open with `command: ["sleep", "infinity"]`.
+
+The five build args (`BASE_IMAGE`, `ROS_DISTRO`, `PROJECT`, `USER_UID`, `USER_GID`) are passed either way, and the build context is the repository root, so `COPY projects/${PROJECT}/apt-packages.txt` works the same. 
+
+A project that only wants extra layers can `FROM drydock:<other>` and inherit all three contracts for free.
+
+### Adding a project
+
+```bash
+cp -r projects/maritime projects/rover
+$EDITOR projects/rover/config projects/rover/apt-packages.txt
+drydock build rover
+```
+
+This is also how you try a different ROS distro. There is deliberately no `--distro` flag: copying the directory and editing one line gives you a second image that coexists with the first, is reviewable in a diff, and is still there next month — where a flag would give you something nobody else can reproduce without being told what you typed.
 
 ## Verifying the GPU is actually being used
 
@@ -179,11 +221,6 @@ One gotcha when measuring: `ros2 topic hz` block-buffers stdout when piped, so `
 
 **A package will not configure because a dependency is missing** — install it in the container to keep moving, then add it to `projects/<name>/apt-packages.txt` and open a PR so the next build has it.
 
-## Credits
-
-Merged from two prototypes: `docker/` in [gz-maritime](https://github.com/HonuRobotics/gz-maritime) by Brian Bingham, and `docker/` on the `jrivero/docker` branch of [bluerobotics_models](https://github.com/HonuRobotics/bluerobotics_models) by Jose Luis Rivero. Both authors' commits are preserved in this repository's history.
-
-Descended from [dockwater](https://github.com/HonuRobotics/dockwater), which did the same job through [rocker](https://github.com/osrf/rocker) for Kinetic through Jazzy — `build` / `run` / `join` is its shape, and the `--home`, `--user`, `--x11` and `--nvidia` behaviours reimplemented in the compose files are rocker's.
 
 ## License
 

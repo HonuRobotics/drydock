@@ -16,9 +16,12 @@
 # capabilities, not only compute. Without a GPU the image still runs on Mesa's
 # llvmpipe software path (slow, but sensors still render).
 
+# Both come from projects/<name>/config, so the distro and the base image a
+# project builds against are version-controlled with the project rather than
+# typed on the command line.
+ARG BASE_IMAGE=ros:lyrical-ros-base
+FROM ${BASE_IMAGE}
 ARG ROS_DISTRO=lyrical
-FROM ros:${ROS_DISTRO}-ros-base
-ARG ROS_DISTRO
 
 LABEL org.opencontainers.image.title="drydock" \
       org.opencontainers.image.description="Honu Robotics ROS 2 / Gazebo development environment" \
