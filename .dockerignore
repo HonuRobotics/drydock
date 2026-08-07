@@ -4,15 +4,9 @@
 # single layer.
 .git
 .github
-.env
-.env.example
 README.md
-CHANGELOG.md
 LICENSE
 drydock
-scripts
 docker/compose.yaml
 docker/compose.nvidia.yaml
 projects/*/README.md
-projects/*/commands.sh
-projects/*/*.repos

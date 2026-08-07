@@ -5,85 +5,64 @@
 #
 #   rocker --home --user --x11 --nvidia --devices /dev/dri ... bash
 #
-# One service. Named shortcuts (`drydock sim`, ...) are commands passed to this
-# same service, not extra services — see projects/<name>/commands.sh.
+# One service, held open by `sleep infinity` so several shells can join it.
+# The drydock script sets the variables below from its command line; there is
+# no .env file. To drive compose directly:
 #
-# Easiest:  ./drydock shell
-#
-# Manually:
-#   touch /tmp/.docker.xauth        # or Docker creates a DIRECTORY there and X breaks
-#   set -a; . ./.env; set +a
+#   touch /tmp/.docker.xauth      # or Docker creates a DIRECTORY and X breaks
+#   xhost +local:
+#   DRYDOCK_TAG=maritime DRYDOCK_PROJECT=maritime \
+#   DRYDOCK_DOCKERFILE=docker/Dockerfile ROS_DISTRO=lyrical \
 #   USER_UID=$(id -u) USER_GID=$(id -g) \
-#     docker compose -f docker/compose.yaml run --rm --remove-orphans dev
-#
-# `run --rm` gives a fresh interactive shell and removes the container on exit,
-# which is the rocker-like behaviour. Use `up -d` + `exec dev bash` if you
-# prefer a long-lived container.
-
-name: drydock
+#     docker compose -p drydock-maritime -f docker/compose.yaml up -d
+#   docker compose -p drydock-maritime -f docker/compose.yaml exec dev bash
 
 services:
   dev:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: ${DRYDOCK_DOCKERFILE:-docker/Dockerfile}
       args:
         ROS_DISTRO: ${ROS_DISTRO:-lyrical}
         PROJECT: ${DRYDOCK_PROJECT:-maritime}
         USER_UID: ${USER_UID:-1000}
         USER_GID: ${USER_GID:-1000}
 
-    # `build:` and `image:` together mean `docker compose build` tags the image
-    # with exactly the name the run path expects, and `docker compose pull`
-    # would work unchanged if we ever publish to a registry.
-    image: ${DRYDOCK_IMAGE:-drydock}:${DRYDOCK_TAG:-lyrical-maritime}
+    image: ${DRYDOCK_IMAGE:-drydock}:${DRYDOCK_TAG:-latest}
 
-    # --- interactive shell (rocker's default) ---
-    stdin_open: true                  # docker -i
-    tty: true                         # docker -t
+    # Keeps the container alive with no shell attached, so `exec` can open as
+    # many sessions as you like and closing one leaves the others alone.
+    command: ["sleep", "infinity"]
+    init: true
 
     # --- host networking: ROS 2 DDS discovery + the simplest X11 path
     #     (DISPLAY reaches the host X server directly) ---
     network_mode: host
     ipc: host
 
-    # Workspace root. The drydock script exports DRYDOCK_WS; the fallback covers
-    # a bare `docker compose` invocation, dropping you in wherever you stand.
-    working_dir: ${DRYDOCK_WS:-${PWD}}
-
+    # List form throughout, because a bare NAME (no `=`) means "take it from the
+    # host if set, leave it unset otherwise" — which the map form cannot express.
     environment:
-      DISPLAY: ${DISPLAY:-:0}
-      XAUTHORITY: /tmp/.docker.xauth
-      QT_X11_NO_MITSHM: 1
+      - DISPLAY=${DISPLAY:-:0}
+      - XAUTHORITY=/tmp/.docker.xauth
+      - QT_X11_NO_MITSHM=1
 
       # The container user is `honu` with image home /home/honu, but HOME points
       # at your host home, which is the one bind-mounted below. Nothing is
       # shadowed — the two paths differ — and getpwuid() still resolves a real
       # named user, which some Qt and Gazebo code paths require.
-      HOME: ${HOME}
-      DRYDOCK_WS: ${DRYDOCK_WS:-${PWD}}
-
-      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
-      # Host networking otherwise puts your sim on the office LAN for every
-      # other ROS 2 node to discover. LOCALHOST still allows host<->container
-      # discovery, since they share loopback. Set SUBNET only for deliberate
-      # multi-machine work, and take a distinct ROS_DOMAIN_ID if you do.
-      ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}
-
-      # gz-transport partitions by <hostname>:<username>, and the container user
-      # is `honu`, not your host user. Pinning it means host-side inspection is
-      # just `GZ_PARTITION=drydock gz topic -l` with nothing to look up.
-      GZ_PARTITION: ${GZ_PARTITION:-drydock}
+      - HOME=${HOME}
 
       # The one real hazard of a whole-$HOME mount: your host
       # ~/.local/lib/python3*/site-packages would otherwise land on the
-      # container's PYTHONPATH and silently shadow container packages.
-      PYTHONNOUSERSITE: ${PYTHONNOUSERSITE:-1}
+      # container's PYTHONPATH and silently shadow container packages. Not a
+      # setting — a fix. Override on a single command if you really need it.
+      - PYTHONNOUSERSITE=1
 
-      # This base renders on the Intel/AMD iGPU via the /dev/dri passthrough
-      # below. NVIDIA access and PRIME render offload live in
-      # compose.nvidia.yaml, which the drydock script layers in automatically
-      # when a usable NVIDIA GPU is detected.
+      # Passed through from the host if set, with no default imposed. Host
+      # networking means whatever you use outside applies inside.
+      - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
 
     volumes:
       - ${HOME}:${HOME}                                  # rocker --home

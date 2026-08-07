@@ -13,18 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Sources the ROS underlay and, if it exists, the mounted workspace's overlay,
-# then execs the command. The overlay is sourced only if present: the workspace
-# is bind-mounted from the host and may not be built yet, and the container
-# must still start so you can build it.
+# Sources the ROS underlay, then execs the command.
+#
+# No workspace overlay is sourced: what you have built and whether you want it
+# on the path is your business, and your shell config is in the mounted home.
+#
+# Note this runs for the container's main process (`sleep infinity`) and for
+# `docker run`, but NOT for `docker compose exec` — the shells you actually
+# work in get ROS from /etc/bash.bashrc and BASH_ENV instead, which is why the
+# Dockerfile sets both.
 set -e
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
-
-# Both colcon install layouts are supported: the default isolated layout and
-# --merge-install both produce ${DRYDOCK_WS}/install/setup.bash.
-if [ -n "${DRYDOCK_WS:-}" ] && [ -f "${DRYDOCK_WS}/install/setup.bash" ]; then
-  source "${DRYDOCK_WS}/install/setup.bash"
-fi
 
 exec "$@"

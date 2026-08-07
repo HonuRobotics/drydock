@@ -4,21 +4,15 @@
 # usable NVIDIA GPU (driver AND container toolkit), so the base stays portable
 # — Intel/AMD iGPU via /dev/dri — and NVIDIA hosts render on the dGPU.
 #
-# Manual use:
-#   docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml run --rm dev
-#
-# Compose merges `environment` maps across files, so this adds to the base
-# environment rather than replacing it. (That is one reason for a second file
-# rather than merged YAML anchors within one file: when two merged anchors
-# define the same key, the first in the merge sequence wins and silently
-# shadows the other.)
+# Compose merges `environment` across files, so this adds to the base rather
+# than replacing it.
 services:
   dev:
     # nvidia-container-toolkit injects the driver libs + /dev/nvidia* when these
     # are set and the reservation below requests the GPU.
     environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: all
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
 
       # PRIME render offload. On a hybrid/Optimus host the X display is driven
       # by the iGPU and NVIDIA is the offload GPU. Mapping /dev/dri in (base
@@ -26,9 +20,9 @@ services:
       # — silently and with no error, unless the vendor is pinned here. This is
       # the "hybrid-laptop trap"; see the README for how to confirm which GPU
       # actually rendered.
-      __NV_PRIME_RENDER_OFFLOAD: 1
-      __GLX_VENDOR_LIBRARY_NAME: nvidia
-      __EGL_VENDOR_LIBRARY_FILENAMES: /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
+      - __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json
 
     # `gpus: all` is the modern shorthand, but it only landed in Compose v2.30.
     # This form is exactly equivalent and works on older Compose too. If your
