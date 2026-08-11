@@ -1,4 +1,4 @@
-# apt packages for the maritime project (gz-maritime, encinowaves, and the
+# apt packages for the maritime project (gz-maritime, ehukai, and the
 # vehicle model repositories).
 #
 # Hand-maintained on purpose. The source tree is not in the image, so
@@ -31,14 +31,12 @@ ros-${ROS_DISTRO}-xacro
 # it is often not yet released early in a new distro's life. Add
 # ros-${ROS_DISTRO}-navigation2 once it is available on Lyrical.
 
-# ---- EncinoWaves build dependencies ---------------------------------------
-# EncinoWaves is built FROM SOURCE in the workspace, as a colcon package
-# alongside everything else — it is a library this team actively develops, so
-# baking a fixed copy into the image would be exactly wrong. These are the
-# dependencies its CMakeLists needs; the library itself is not installed here.
-#
-# (A prebuilt libencinowaves-dev is published at packages.honurobotics.com for
-# anyone who never touches the library — see the README.)
+# ---- ehukai build dependencies --------------------------------------------
+# ehukai (formerly EncinoWaves) is built FROM SOURCE in the workspace, as a
+# colcon package alongside everything else — it is a library this team actively
+# develops, so baking a fixed copy into the image would be exactly wrong. These
+# are the dependencies its CMakeLists needs; the library itself is not
+# installed here, and should not be.
 cmake
 build-essential
 libeigen3-dev
