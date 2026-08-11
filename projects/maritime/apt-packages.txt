@@ -17,7 +17,7 @@ ros-${ROS_DISTRO}-actuator-msgs
 ros-${ROS_DISTRO}-ament-cmake-pycodestyle
 ros-${ROS_DISTRO}-image-transport
 ros-${ROS_DISTRO}-image-transport-plugins
-ros-${ROS_DISTRO}-joint-state-publisher-gui
+ros-${ROS_DISTRO}-joint-state-publisher-gui   # *_description display launches
 ros-${ROS_DISTRO}-joy-teleop
 ros-${ROS_DISTRO}-joy-linux
 ros-${ROS_DISTRO}-mavros-msgs
@@ -32,11 +32,12 @@ ros-${ROS_DISTRO}-xacro
 # ros-${ROS_DISTRO}-navigation2 once it is available on Lyrical.
 
 # ---- ehukai build dependencies --------------------------------------------
-# ehukai (formerly EncinoWaves) is built FROM SOURCE in the workspace, as a
-# colcon package alongside everything else — it is a library this team actively
-# develops, so baking a fixed copy into the image would be exactly wrong. These
-# are the dependencies its CMakeLists needs; the library itself is not
-# installed here, and should not be.
+# These are here for ehukai, the spectral wave library, and nothing else —
+# which is worth stating, because libimath-dev and libtbb-dev are otherwise
+# unexplainable lines in a maritime package list.
+#
+# ehukai is built from source in the workspace like everything else, so the
+# image needs what its CMakeLists looks for but not the library itself.
 cmake
 build-essential
 libeigen3-dev
