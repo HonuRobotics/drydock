@@ -62,6 +62,13 @@ services:
 
       # Passed through from the host if set, with no default imposed. Host
       # networking means whatever you use outside applies inside.
+      #
+      # Worth knowing what "no default imposed" costs you: ROS 2 defaults to
+      # SUBNET, so DDS discovery reaches every ROS 2 node on the LAN. Export
+      # ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST on the host to keep your sim
+      # off your colleagues' machines — host and container still find each
+      # other, since they share loopback. Take a distinct ROS_DOMAIN_ID for
+      # deliberate multi-machine work.
       - ROS_DOMAIN_ID
       - ROS_AUTOMATIC_DISCOVERY_RANGE
 

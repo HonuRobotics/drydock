@@ -35,7 +35,9 @@
 # the same path inside. Cloning, rosdep and colcon are yours to type.
 set -euo pipefail
 
-readonly HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# readlink -f so a symlink on PATH still finds projects/ next to the real
+# script rather than next to the symlink.
+readonly HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
 usage() { sed -n '16,35p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; }
 
