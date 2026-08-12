@@ -40,7 +40,7 @@ cd ~/ws
 rosdep install --from-paths src --ignore-src -y
 colcon build --merge-install
 source install/setup.bash
-ros2 launch vrx_bringup simulation.launch.xml
+ros2 launch kai_bringup simulation.launch.xml
 ```
 
 From another terminal, open more shells on that same container:
