@@ -44,6 +44,34 @@ libeigen3-dev
 libtbb-dev
 libimath-dev
 
+# ---- ArduPilot firmware build dependencies --------------------------------
+# waf and Tools/autotest drive subprocesses through pexpect, so a build fails
+# on a missing import rather than a missing package. ArduPilot lists it among
+# their apt packages, not their pip ones, which is why it belongs here.
+#
+# Everything else ArduPilot needs in Python — MAVProxy, pymavlink, dronecan,
+# empy==3.3.4 — stays out of this file deliberately. Their prereq script puts
+# those in a venv on Ubuntu 24.04 and later, and that separation matters: the
+# image carries empy 4.2.1 for ament, and ArduPilot pins 3.3.4.
+python3-pexpect
+ccache
+gawk
+
+# MAVProxy's --map and --console modules need wxPython. Taking it from apt
+# rather than pip matters: the pip build compiles wxWidgets and takes an hour
+# or more, while ArduPilot's venv is created with --system-site-packages, so
+# the apt module is visible from inside it.
+python3-wxgtk4.0
+
+# ---- ardupilot_gazebo build dependencies ----------------------------------
+# For the ArduPilot SITL plugin, built from source in ~/maritime_ws/thirdparty
+# rather than as a colcon package. rapidjson-dev and libopencv-dev are already
+# pulled in above by other things; these two are not, and the plugin's
+# CMakeLists requires them unconditionally even though only its optional
+# camera plugin uses them.
+libgstreamer1.0-dev
+libgstreamer-plugins-base1.0-dev
+
 # ---- misc -----------------------------------------------------------------
 libbluetooth-dev
 libcwiid-dev
