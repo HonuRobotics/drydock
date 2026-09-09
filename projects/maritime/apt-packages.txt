@@ -25,6 +25,7 @@ ros-${ROS_DISTRO}-teleop-twist-joy
 ros-${ROS_DISTRO}-mavros-msgs
 ros-${ROS_DISTRO}-radar-msgs
 ros-${ROS_DISTRO}-robot-state-publisher
+ros-${ROS_DISTRO}-rqt
 ros-${ROS_DISTRO}-rviz2
 ros-${ROS_DISTRO}-vision-msgs
 ros-${ROS_DISTRO}-xacro
@@ -84,3 +85,12 @@ libcwiid-dev
 # rather than the libtbb-dev mistake repeated: `urdfdom` is a different key and
 # resolves to ros-${ROS_DISTRO}-urdfdom, the library rather than the tools.
 liburdfdom-tools
+
+# Gamepad checks, for answering "is the pad reaching the container at all?"
+# before blaming the teleop stack. jstest (from the `joystick` package) reads
+# /dev/input/js*, evtest reads /dev/input/event* — and the event device is the
+# one that matters here, because bluerobotics_teleop launches the `joy` node,
+# which is SDL2-based. Both are console tools on purpose; jstest-gtk exists but
+# would only be another thing needing X.
+joystick
+evtest

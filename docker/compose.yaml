@@ -81,6 +81,19 @@ services:
       # /run/user/<uid>/gdm/ and collides with the home mount.
       - ${XAUTH_FILE:-/tmp/.docker.xauth}:/tmp/.docker.xauth:rw
 
+      # Gamepads. The whole directory rather than a node, because event*
+      # numbering changes on every replug. A bind mount and not `devices:`
+      # because that does not recurse into a directory. Harmless with no pad
+      # plugged in. Read/write, since force feedback writes to the device.
+      - /dev/input:/dev/input:rw
+
     devices:
       - /dev/dri:/dev/dri                                # direct rendering (Intel/AMD/GL)
-      # - /dev/input/js0:/dev/input/js0                  # joystick, if you have one
+
+    # The mount above puts the device nodes in the container, but the device
+    # cgroup still denies them: without this rule `joy_enumerate_devices`
+    # prints its header and no rows, exactly as it does with no pad attached.
+    # Major 13 is the input subsystem. `devices:` would do this implicitly, but
+    # only for a node named one at a time.
+    device_cgroup_rules:
+      - 'c 13:* rmw'
