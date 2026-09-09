@@ -20,6 +20,8 @@ ros-${ROS_DISTRO}-image-transport-plugins
 ros-${ROS_DISTRO}-joint-state-publisher-gui   # *_description display launches
 ros-${ROS_DISTRO}-joy-teleop
 ros-${ROS_DISTRO}-joy-linux
+ros-${ROS_DISTRO}-joy
+ros-${ROS_DISTRO}-teleop-twist-joy
 ros-${ROS_DISTRO}-mavros-msgs
 ros-${ROS_DISTRO}-radar-msgs
 ros-${ROS_DISTRO}-robot-state-publisher
