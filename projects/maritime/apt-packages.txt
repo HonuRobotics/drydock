@@ -26,6 +26,10 @@ ros-${ROS_DISTRO}-mavros-msgs
 ros-${ROS_DISTRO}-radar-msgs
 ros-${ROS_DISTRO}-robot-state-publisher
 ros-${ROS_DISTRO}-rqt
+# rqt is the framework alone — the shell and the plugin loader, no plugins
+# beyond what ros-base already carries. The node graph is its own package, and
+# the only thing here that needs qt_dotgraph, pydot and pygraphviz.
+ros-${ROS_DISTRO}-rqt-graph
 ros-${ROS_DISTRO}-rviz2
 ros-${ROS_DISTRO}-vision-msgs
 ros-${ROS_DISTRO}-xacro
