@@ -1,0 +1,16 @@
+# SITL and colcon leave their output in whatever directory you launched from,
+# which is often this one. None of it belongs in the repo.
+
+# ArduPilot SITL run output
+logs/
+terrain/
+eeprom.bin
+mav.parm
+mav_*.parm
+mav.tlog
+mav.tlog.raw
+
+# colcon, if you ever build from inside this repo
+build/
+install/
+log/
