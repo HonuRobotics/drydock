@@ -1,0 +1,47 @@
+# apt packages for the deepsea project (orca4-derived AUV simulators on
+# Jazzy + Harmonic, with ArduSub SITL).
+#
+# Hand-maintained; `rosdep install --from-paths src --ignore-src -y` against
+# the mounted workspace is what authoritatively resolves dependencies. When
+# rosdep installs something new, add it here.
+#
+# Syntax: one package per line, # comments, ${ROS_DISTRO} is substituted.
+
+# ---- ROS packages ---------------------------------------------------------
+ros-${ROS_DISTRO}-camera-info-manager
+ros-${ROS_DISTRO}-geographic-msgs
+ros-${ROS_DISTRO}-image-geometry
+ros-${ROS_DISTRO}-mavros
+ros-${ROS_DISTRO}-mavros-extras
+ros-${ROS_DISTRO}-mavros-msgs
+ros-${ROS_DISTRO}-nav2-bringup
+ros-${ROS_DISTRO}-navigation2
+ros-${ROS_DISTRO}-rqt
+ros-${ROS_DISTRO}-rqt-graph
+ros-${ROS_DISTRO}-rviz2
+ros-${ROS_DISTRO}-tf2-geometry-msgs
+ros-${ROS_DISTRO}-xacro
+
+# mavros needs the egm96 geoid dataset; this provides geographiclib-get-geoids.
+geographiclib-tools
+
+# ---- ardupilot_gazebo build dependencies ----------------------------------
+# Built from source in the workspace's thirdparty/ with GZ_VERSION=harmonic,
+# against the gz vendor packages the shared Dockerfile installs.
+rapidjson-dev
+libopencv-dev
+libgstreamer1.0-dev
+libgstreamer-plugins-base1.0-dev
+gstreamer1.0-plugins-bad
+gstreamer1.0-libav
+gstreamer1.0-gl
+
+# ---- ArduSub SITL build dependencies --------------------------------------
+# Noble's python3-empy is 3.3.4, the version ArduPilot pins. MAVProxy and
+# pymavlink stay out of this file; put them in a venv if needed.
+python3-empy
+python3-future      # the waf build's MAVLink generation imports it
+python3-pexpect
+python3-wxgtk4.0
+ccache
+gawk

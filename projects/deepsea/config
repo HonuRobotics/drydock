@@ -1,0 +1,11 @@
+# Build configuration for the deepsea project: ROS 2 Jazzy (Ubuntu 24.04
+# "Noble") + Gazebo Harmonic, for prototyping against orca4-derived AUV
+# simulators with ArduSub SITL. Sourced by the drydock script.
+#
+# Jazzy rather than Humble: the SMD simulator and sensor-plugin code use APIs
+# that only exist from Jazzy on (C++20 <format> needs GCC 13, the
+# rclcpp::QoS create_service overload, nav2_core/planner_exceptions.hpp), even
+# though their Dockerfile and CI still say Humble.
+
+ROS_DISTRO=jazzy
+BASE_IMAGE=ros:${ROS_DISTRO}-ros-base
