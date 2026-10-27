@@ -158,6 +158,14 @@ if have_nvidia_gpu && have_nvidia_runtime; then
   gpu_path="NVIDIA dGPU via PRIME offload"
 fi
 
+# WSL2 has no /dev/dri, only /dev/dxg; the overlay swaps the device and pins
+# Mesa to d3d12, which otherwise falls back to llvmpipe without a word.
+on_wsl() { [ -e /dev/dxg ] && [ ! -e /dev/dri ]; }
+if on_wsl; then
+  compose_files+=(-f "${HERE}/docker/compose.wsl.yaml")
+  have_nvidia_runtime || gpu_path="Windows GPU via WSL2 /dev/dxg (Mesa d3d12)"
+fi
+
 # Called plainly, never with `exec` — `exec` bypasses shell functions and would
 # find /usr/bin/compose (the mailcap tool) instead.
 compose() { "${DOCKER[@]}" compose -p "${NAME}" "${compose_files[@]}" "$@"; }
@@ -259,6 +267,8 @@ doctor() {
       warn "NVIDIA driver present but Docker has no nvidia runtime → falling back to the iGPU"
       warn "  fix: sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker"
     fi
+  elif on_wsl; then
+    ok "WSL2 — ${gpu_path}"
   else
     ok "no NVIDIA GPU — using /dev/dri (Intel/AMD) or software rendering"
   fi

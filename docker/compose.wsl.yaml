@@ -1,0 +1,25 @@
+# WSL2 overlay for the drydock development container.
+#
+# The drydock script layers this on top of compose.yaml when it runs under WSL2
+# (/dev/dxg present, no /dev/dri) and no NVIDIA runtime is in use. WSL2 has no
+# DRM render nodes: the Windows GPU driver is reached through /dev/dxg and the
+# user-space libraries under /usr/lib/wsl/lib, and Mesa renders on it with its
+# d3d12 Gallium driver. Any GPU vendor works this way (AMD, Intel, NVIDIA
+# without the container toolkit).
+#
+# The trap: with no /dev/dri, Mesa does not pick d3d12 on its own and falls back
+# to llvmpipe (software) with no error. GALLIUM_DRIVER pins it; check with
+# `glxinfo -B | grep renderer`, which should name the Windows GPU behind "D3D12".
+services:
+  dev:
+    environment:
+      - GALLIUM_DRIVER=d3d12
+      - LD_LIBRARY_PATH=/usr/lib/wsl/lib
+
+    volumes:
+      - /usr/lib/wsl:/usr/lib/wsl:ro                     # libd3d12, libdxcore
+
+    # Replaces the base /dev/dri entry, which does not exist under WSL2 and
+    # would stop the container from starting. Needs Compose v2.24+ for !override.
+    devices: !override
+      - /dev/dxg:/dev/dxg
