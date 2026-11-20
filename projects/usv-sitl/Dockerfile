@@ -76,8 +76,10 @@ ENV USER=${USERNAME}
 
 # The guide pip-installs MAVProxy with --user, into ~/.local/bin. On a desktop
 # the login shell's ~/.profile puts that on PATH; drydock shells are not login
-# shells, so do the same for every interactive shell here.
-RUN echo '[ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"' >> /etc/bash.bashrc
+# shells, so do the same for every interactive shell here. Unconditionally:
+# on a fresh home the folder only appears during the guide's Step 2, in a shell
+# that has already started.
+RUN echo 'PATH="$HOME/.local/bin:$PATH"' >> /etc/bash.bashrc
 
 USER ${USERNAME}
 CMD ["bash"]
