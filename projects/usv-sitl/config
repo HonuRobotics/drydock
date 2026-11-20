@@ -1,0 +1,16 @@
+# Build configuration for the usv-sitl project: Ubuntu 22.04 with the apt
+# dependencies of ArduPilot Rover SITL, for the usv-autopilot SITL setup guide
+# (Field-Robotics-Lab/usv-autopilot, usv-sitl/docs/getting-started/). Sourced
+# by the drydock script.
+#
+# BASE_IMAGE   plain Ubuntu, not ros:*; this project has its own Dockerfile.
+# DRYDOCK_HOME the home the container sees, in place of your own. The guide
+#              clones ~/ardupilot, pip-installs MAVProxy with --user and edits
+#              ~/.bashrc; all of that lands here, not in your real home.
+#              Delete the directory to start over.
+#
+# ROS_DISTRO is unused, but the drydock script exports it either way.
+
+ROS_DISTRO=none
+BASE_IMAGE=ubuntu:22.04
+DRYDOCK_HOME=${HOME}/drydock-homes/usv-sitl

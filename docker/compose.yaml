@@ -52,13 +52,18 @@ services:
       # at your host home, which is the one bind-mounted below. Nothing is
       # shadowed — the two paths differ — and getpwuid() still resolves a real
       # named user, which some Qt and Gazebo code paths require.
-      - HOME=${HOME}
+      #
+      # DRYDOCK_HOME is set by the drydock script: your $HOME, or the project's
+      # own home directory when its config names one (DRYDOCK_HOME=...).
+      - HOME=${DRYDOCK_HOME:-${HOME}}
 
       # The one real hazard of a whole-$HOME mount: your host
       # ~/.local/lib/python3*/site-packages would otherwise land on the
       # container's PYTHONPATH and silently shadow container packages. Not a
       # setting — a fix. Override on a single command if you really need it.
-      - PYTHONNOUSERSITE=1
+      # A project with its own home has no host site-packages to leak, so the
+      # drydock script sets DRYDOCK_NOUSERSITE empty there and the guard is off.
+      - PYTHONNOUSERSITE=${DRYDOCK_NOUSERSITE-1}
 
       # Passed through from the host if set, with no default imposed. Host
       # networking means whatever you use outside applies inside.
@@ -73,7 +78,7 @@ services:
       - ROS_AUTOMATIC_DISCOVERY_RANGE
 
     volumes:
-      - ${HOME}:${HOME}                                  # rocker --home
+      - ${DRYDOCK_HOME:-${HOME}}:${DRYDOCK_HOME:-${HOME}}  # rocker --home
       - /tmp/.X11-unix:/tmp/.X11-unix:rw                 # X11 socket
       # An X cookie the container user can actually use, rewritten to
       # FamilyWild by the drydock script. Deliberately at /tmp rather than

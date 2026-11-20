@@ -116,6 +116,20 @@ export USER_UID="${USER_UID:-$(id -u)}"
 export USER_GID="${USER_GID:-$(id -g)}"
 export XAUTH_FILE="${XAUTH_FILE:-/tmp/.docker.xauth}"
 
+# The home the container sees. Normally your own $HOME. A project whose config
+# sets DRYDOCK_HOME gets that directory instead, mounted at the same path, so
+# whatever it installs under ~ (pip --user, ~/.profile edits) stays out of your
+# real home. That is also the one case where PYTHONNOUSERSITE is not needed.
+DRYDOCK_HOME="${DRYDOCK_HOME:-${HOME}}"
+DRYDOCK_HOME="${DRYDOCK_HOME%/}"
+export DRYDOCK_HOME
+if [ "${DRYDOCK_HOME}" = "${HOME}" ]; then
+  export DRYDOCK_NOUSERSITE=1
+else
+  export DRYDOCK_NOUSERSITE=""
+  mkdir -p "${DRYDOCK_HOME}"
+fi
+
 # A project can set BASE_IMAGE in its config to move onto a different base, so
 # it should rarely need a Dockerfile of its own. When it does have one, prefer
 # it — that is the escape hatch for a genuinely different recipe.
@@ -201,10 +215,10 @@ prepare_xauth() {
 # same absolute path inside the container.
 session_workdir() {
   case "${PWD}/" in
-    "${HOME}"/*) printf '%s' "${PWD}" ;;
+    "${DRYDOCK_HOME}"/*) printf '%s' "${PWD}" ;;
     *)
-      echo "==> ${PWD} is outside \$HOME and is not mounted; opening in ${HOME}." >&2
-      printf '%s' "${HOME}"
+      echo "==> ${PWD} is not mounted; opening in ${DRYDOCK_HOME}." >&2
+      printf '%s' "${DRYDOCK_HOME}"
       ;;
   esac
 }
