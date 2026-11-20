@@ -4,13 +4,17 @@
 # by the drydock script.
 #
 # BASE_IMAGE   plain Ubuntu, not ros:*; this project has its own Dockerfile.
-# DRYDOCK_HOME the home the container sees, in place of your own. The guide
-#              clones ~/ardupilot, pip-installs MAVProxy with --user and edits
-#              ~/.bashrc; all of that lands here, not in your real home.
-#              Delete the directory to start over.
+# DRYDOCK_HOME the home the container sees, in place of your own: the folder
+#              this drydock checkout is cloned into, i.e. the guide's working
+#              directory, which also holds the ardupilot and usv-autopilot
+#              clones. They appear at the same paths inside the container, and
+#              what ArduPilot's install script writes to ~ (pip --user into
+#              ~/.local, ~/.bashrc, ~/.ardupilot_env) lands there as hidden
+#              files, not in your real home. Do not clone drydock directly into
+#              your home directory for this project.
 #
 # ROS_DISTRO is unused, but the drydock script exports it either way.
 
 ROS_DISTRO=none
 BASE_IMAGE=ubuntu:22.04
-DRYDOCK_HOME=${HOME}/drydock-homes/usv-sitl
+DRYDOCK_HOME="$(dirname "${HERE}")"
